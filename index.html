@@ -134,13 +134,39 @@ html.anim .skip{display:block}
 
 /* everything after the logo waits for the intro */
 html.anim .rv{opacity:0}
-.dock{position:fixed;left:0;right:0;bottom:0;z-index:65;display:grid;justify-items:center;gap:6px;padding:28px 12px max(10px,env(safe-area-inset-bottom));
-  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.94) 24px);transition:transform .7s cubic-bezier(.2,.8,.2,1),opacity .7s}
-html.anim .dock{transform:translateY(120%);opacity:0}
-.dock .lbl{font:400 10.5px/1 var(--font-mono);letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
-.dock .lbl b{font-weight:400;color:var(--orange-s1)}
-.dock iframe{display:block;width:min(100%,440px);height:80px;border:0;border-radius:12px;background:#141111;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 0 30px -8px rgba(255,74,26,.7)}
-.gift{padding-bottom:140px}
+
+/* music gate: after the logo, ask before any sound */
+.gate{position:fixed;left:0;right:0;bottom:max(14vh,calc(env(safe-area-inset-bottom) + 80px));z-index:62;display:grid;justify-items:center;gap:16px;padding:0 16px;text-align:center;opacity:0;visibility:hidden;transition:opacity .6s,visibility 0s .6s}
+.gate.on{opacity:1;visibility:visible;transition:opacity .6s}
+.gate.done{opacity:1;visibility:hidden;transition:none}
+.gate .q{font:400 11px/1 var(--font-mono);letter-spacing:.3em;text-transform:uppercase;color:var(--muted)}
+.gate .q b{font-weight:400;color:var(--orange-s1)}
+.gate .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.gate.asking .row{display:none}
+.gate .yes{width:auto;min-height:48px;padding:14px 22px;font-size:14.5px}
+.gate .no{min-height:48px;padding:14px 20px;border-radius:12px;border:1px solid rgba(255,255,255,.22);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015));color:var(--white);font:500 14.5px/1 var(--font-grotesk);cursor:pointer}
+.gate .no:hover,.gate .no:focus-visible{border-color:var(--orange-s1);outline:0}
+.gate .tap{margin:0;font:400 11.5px/1.5 var(--font-mono);color:#d9d2cf;max-width:32ch}
+.gate .tap[hidden]{display:none}
+.gate .tap button{background:none;border:0;border-bottom:1px solid var(--line);color:var(--muted);font:inherit;padding:4px 0;margin-top:6px;cursor:pointer}
+html.anim .skip.hide{opacity:0!important;pointer-events:none}
+/* the Spotify player: one iframe for the whole visit, only shown when it needs a tap */
+.player{width:min(calc(100vw - 32px),400px);height:0;overflow:hidden;border-radius:12px}
+.gate.asking .player,.player.float{height:80px;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 34px -8px rgba(255,74,26,.75)}
+.player.float{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);visibility:visible;z-index:63}
+.player iframe{display:block;width:100%;height:80px;border:0}
+/* on/off */
+.music{position:fixed;z-index:64;bottom:max(14px,env(safe-area-inset-bottom));right:14px;display:none;align-items:center;gap:9px;padding:9px 13px 9px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.22);
+  background:rgba(10,8,8,.7);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--muted);font:400 11px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.music.show{display:inline-flex}
+.music:hover,.music:focus-visible{border-color:var(--orange-s1);color:var(--white);outline:0}
+.music .eq{display:flex;align-items:flex-end;gap:2px;height:13px}
+.music .eq i{width:2px;height:3px;background:currentColor;border-radius:1px}
+.music.playing{color:var(--white)}
+.music.playing .eq i{background:var(--orange-s1);animation:meq 1s ease-in-out infinite}
+.music.playing .eq i:nth-child(2){animation-delay:-.35s}.music.playing .eq i:nth-child(3){animation-delay:-.7s}.music.playing .eq i:nth-child(4){animation-delay:-.2s}
+@keyframes meq{0%,100%{height:3px}50%{height:13px}}
+html.anim .music{display:none}
 </style>
 </head>
 <body>
@@ -185,10 +211,6 @@ html.anim .dock{transform:translateY(120%);opacity:0}
     <span class="sign rv">escanea · toca · sube el volumen</span>
   </div>
 </main>
-<div class="dock">
-  <span class="lbl">dale play · <b>1989</b> · y sigue leyendo</span>
-  <iframe title="1989 de Silver MX en Spotify" src="https://open.spotify.com/embed/track/6Xxt1e8SGqKs4PradBjmMY?utm_source=generator&amp;theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-</div>
 
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-t">
   <div class="bd" data-close></div>
@@ -199,6 +221,54 @@ html.anim .dock{transform:translateY(120%);opacity:0}
     <button class="x" type="button" data-close>cancelar</button>
   </div>
 </div>
+<div class="gate" id="gate" role="dialog" aria-label="Música">
+  <span class="q">¿continuar con música? · <b>1989</b></span>
+  <div class="row">
+    <button class="btn yes" type="button" id="g-yes">Sí, con música ♪</button>
+    <button class="no" type="button" id="g-no">Sin música</button>
+  </div>
+  <div class="player" id="player"><div id="spot"></div></div>
+  <p class="tap" id="g-tap" hidden>Toca ▶ en el reproductor y entramos.<br><button type="button" id="g-skip">entrar sin música</button></p>
+</div>
+<button class="music" type="button" id="music" aria-pressed="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="m-l">música off</span></button>
+<script>
+(function(){
+  var URI='spotify:track:6Xxt1e8SGqKs4PradBjmMY', EMBED='https://open.spotify.com/embed/track/6Xxt1e8SGqKs4PradBjmMY?utm_source=generator&theme=0';
+  var gate=document.getElementById('gate'), tap=document.getElementById('g-tap'), player=document.getElementById('player'), btn=document.getElementById('music'), skip=document.querySelector('.skip');
+  var ctrl=null, playing=false, waiting=null, resume=null;
+  function setPlaying(p){ playing=p; btn.classList.toggle('playing',p); btn.setAttribute('aria-pressed',p); document.getElementById('m-l').textContent=p?'música on':'música off';
+    if(p&&waiting){ var w=waiting; waiting=null; w() } }
+  // Spotify's iFrame API gives play/pause control; without it a plain embed still plays on its own tap
+  window.onSpotifyIframeApiReady=function(api){
+    api.createController(document.getElementById('spot'),{uri:URI,width:'100%',height:80},function(c){ ctrl=c;
+      c.addListener('playback_update',function(e){ setPlaying(!!(e&&e.data&&!e.data.isPaused)) }) });
+  };
+  var s=document.createElement('script'); s.src='https://open.spotify.com/embed/iframe-api/v1'; s.async=true;
+  s.onerror=function(){ document.getElementById('spot').outerHTML='<iframe src="'+EMBED+'" allow="autoplay; encrypted-media" title="1989 de Silver MX en Spotify"></iframe>' };
+  document.head.appendChild(s);
+
+  function hideFloat(){ player.classList.remove('float') }
+  function land(){ waiting=null; gate.classList.remove('on','asking'); gate.classList.add('done'); tap.hidden=true; skip&&skip.classList.remove('hide'); btn.classList.add('show'); var r=resume; resume=null; r&&r() }
+  function ask(){ gate.classList.add('asking'); tap.hidden=false; waiting=land }  // the listener taps the player's own ▶, which phones always allow
+  window.smxGate=function(next){ resume=next; skip&&skip.classList.add('hide'); gate.classList.add('on'); document.getElementById('g-yes').focus({preventScroll:true}) };
+  window.smxGateDone=function(){ if(gate.classList.contains('on')) land(); else btn.classList.add('show') };
+  document.getElementById('g-no').addEventListener('click',land);
+  document.getElementById('g-skip').addEventListener('click',land);
+  document.getElementById('g-yes').addEventListener('click',function(){
+    if(!ctrl){ ask(); return }
+    waiting=land; ctrl.play();
+    setTimeout(function(){ if(!playing&&waiting) ask() },1200);
+  });
+  // on/off after landing
+  btn.addEventListener('click',function(){
+    if(playing&&ctrl){ ctrl.pause(); return }
+    if(playing){ player.classList.add('float'); return }   // plain embed: show it so they can pause there
+    if(ctrl){ ctrl.resume?ctrl.resume():ctrl.play(); setTimeout(function(){ if(!playing){ player.classList.add('float'); waiting=hideFloat } },1200); return }
+    player.classList.toggle('float'); waiting=hideFloat;
+  });
+  if(!document.documentElement.classList.contains('anim')) btn.classList.add('show');
+})();
+</script>
 <script>
 (function(){
   var root=document.documentElement;
@@ -206,7 +276,7 @@ html.anim .dock{transform:translateY(120%);opacity:0}
   var $=function(s){return document.querySelector(s)}, $$=function(s){return [].slice.call(document.querySelectorAll(s))};
   var mark=$('.mark'), stroke=$('.iso .stroke'), fill=$('.iso .fill'), glow=$('.boot .glow'), line=$('.boot .line'), count=$('.boot .count'), skip=$('.skip');
   var qrbox=$('.qrbox'), card=$('.qrbox .card'), beam=$('.qrbox .beam'), corners=$$('.qrbox .c');
-  var ease='cubic-bezier(.22,.61,.36,1)', anims=[], timers=[], running=false, t0;
+  var ease='cubic-bezier(.22,.61,.36,1)', anims=[], timers=[], running=false, gated=false, t0;
 
   function a(n,k,o){var x=n.animate(k,Object.assign({fill:'both',easing:ease},o));anims.push(x);return x}
   function clear(){anims.forEach(function(x){x.cancel()});anims=[];timers.forEach(clearTimeout);timers=[]}
@@ -235,7 +305,7 @@ html.anim .dock{transform:translateY(120%);opacity:0}
       a(c,[{transform:'translate('+sx*40+'px,'+sy*40+'px)',opacity:0},{transform:'none',opacity:1}],{delay:Q,duration:700,easing:'cubic-bezier(.2,.8,.2,1)'})});
     a(card,[{clipPath:'inset(0 0 100% 0 round 14px)'},{clipPath:'inset(0 0 0% 0 round 14px)'}],{delay:Q+500,duration:1300,easing:'linear'});
     a(beam,[{top:'0%',opacity:1},{top:'100%',opacity:1},{top:'100%',opacity:0}],{delay:Q+500,duration:1550,easing:'linear'});
-    $$('.cap,h1,.lead,.thanks,.btn,.share,.chip,.sign').forEach(function(n,i){
+    $$('.cap,h1,.lead,.thanks,.actions .btn,.share,.chip,.sign').forEach(function(n,i){
       var d=n.matches('.cap')?Q-300:Q+1500+i*170;
       a(n,[{opacity:0,transform:'translateY(10px)',filter:'blur(6px)'},{opacity:1,transform:'none',filter:'blur(0)'}],{delay:d,duration:800});
     });
@@ -243,13 +313,17 @@ html.anim .dock{transform:translateY(120%);opacity:0}
     a(count,[{opacity:1},{opacity:0}],{delay:Q+1200,duration:300,fill:'forwards'});
     (function tick(){ if(!running) return; var s=(performance.now()-t0)/1000; count.textContent='00:0'+Math.min(9,Math.floor(s))+'.'+String(Math.floor(s*100)%100).padStart(2,'0'); requestAnimationFrame(tick)})();
     var last=anims.reduce(function(m,x){var t=x.effect.getComputedTiming();return Math.max(m,t.endTime)},0);
-    timers.push(setTimeout(end,last+50));
+    // optional pause after the logo (the GitHub version asks about music here)
+    if(window.smxGate&&!gated){ gated=true; var G=3100;
+      timers.push(setTimeout(function(){ anims.forEach(function(x){x.pause()});
+        window.smxGate(function(){ if(!running) return; anims.forEach(function(x){x.play()}); timers.push(setTimeout(end,last-G+50)) }) },G));
+    } else timers.push(setTimeout(end,last+50));
   }
-  function end(){ if(!running) return; running=false; anims.forEach(function(x){try{x.finish()}catch(e){}}); clear(); root.classList.remove('anim'); }
+  function end(){ if(!running) return; running=false; window.smxGateDone&&window.smxGateDone(); anims.forEach(function(x){try{x.finish()}catch(e){}}); clear(); root.classList.remove('anim'); }
   function key(e){ if(running&&(e.key==='Escape'||e.key==='Enter'||e.key===' ')){e.preventDefault();end()} }
   skip.addEventListener('click',end);
   document.addEventListener('keydown',key);
-  document.addEventListener('pointerdown',function(e){ if(running&&!e.target.closest('.skip')) end() });
+  document.addEventListener('pointerdown',function(e){ if(running&&!e.target.closest('.skip,.gate')) end() });
   $('#replay').addEventListener('click',play);
   if(new URLSearchParams(location.search).has('nointro')) root.classList.remove('anim'); else play();
 })();
