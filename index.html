@@ -157,6 +157,7 @@ html.anim .skip.hide{opacity:0!important;pointer-events:none}
 .gate.asking .player iframe,.player.open iframe{box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 34px -8px rgba(255,74,26,.75)}
 .player.float{position:fixed;left:auto;right:14px;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 56px);width:min(calc(100vw - 28px),380px);height:152px;z-index:63;
   visibility:hidden;opacity:0;transform:scale(.15);transform-origin:calc(100% - 22px) calc(100% + 34px);transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s,visibility 0s .35s}
+.player.float:not(.ready){transition:none}
 .player.float.open{visibility:visible;opacity:1;transform:none;transition:transform .4s cubic-bezier(.2,.8,.2,1),opacity .25s}
 .player .x{display:none;position:absolute;right:0;top:-38px;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(10,8,8,.85);color:var(--white);font:400 16px/1 var(--font-grotesk);cursor:pointer}
 .player.open .x{display:grid;place-items:center}
@@ -267,7 +268,9 @@ html.anim .music{display:none}
   s.onerror=function(){ document.getElementById('spot').outerHTML='<iframe src="'+EMBED+'" allow="autoplay; encrypted-media" title="1989 de Silver MX en Spotify"></iframe>' };
   document.head.appendChild(s);
 
-  function land(){ waiting=null; gate.classList.remove('on','asking'); gate.classList.add('done'); tap.hidden=true; player.classList.add('float'); skip&&skip.classList.remove('hide'); btn.classList.add('show'); var r=resume; resume=null; r&&r() }
+  // park the player as the hidden card behind the music button, with no animation so it never flashes
+  function dock(){ if(player.classList.contains('float')) return; player.classList.add('float'); void player.offsetWidth; requestAnimationFrame(function(){ player.classList.add('ready') }) }
+  function land(){ waiting=null; gate.classList.remove('on','asking'); gate.classList.add('done'); tap.hidden=true; dock(); skip&&skip.classList.remove('hide'); btn.classList.add('show'); var r=resume; resume=null; r&&r() }
   function ask(){ gate.classList.add('asking'); tap.hidden=false; waiting=land }  // the listener taps the player's own ▶, which phones always allow
   window.smxGate=function(next){ resume=next; skip&&skip.classList.add('hide'); gate.classList.add('on'); document.getElementById('g-yes').focus({preventScroll:true}) };
   window.smxGateDone=function(){ if(gate.classList.contains('on')) land(); else btn.classList.add('show') };
@@ -280,7 +283,7 @@ html.anim .music{display:none}
   });
   // on/off after landing
   // music button: opens the full Spotify card (cover, song, Spotify, + to save); tap outside or × to fold it back
-  function openP(o){ player.classList.add('float'); player.classList.toggle('open',o); btn.classList.toggle('open',o); btn.setAttribute('aria-expanded',o); if(o) invite.hidden=true }
+  function openP(o){ dock(); player.classList.toggle('open',o); btn.classList.toggle('open',o); btn.setAttribute('aria-expanded',o); if(o) invite.hidden=true }
   btn.addEventListener('click',function(){ openP(!player.classList.contains('open')) });
   document.getElementById('p-x').addEventListener('click',function(){ openP(false) });
   document.addEventListener('pointerdown',function(e){ if(player.classList.contains('open')&&!e.target.closest('#player,#music')) openP(false) });
