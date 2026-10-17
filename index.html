@@ -150,11 +150,18 @@ html.anim .rv{opacity:0}
 .gate .tap[hidden]{display:none}
 .gate .tap button{background:none;border:0;border-bottom:1px solid var(--line);color:var(--muted);font:inherit;padding:4px 0;margin-top:6px;cursor:pointer}
 html.anim .skip.hide{opacity:0!important;pointer-events:none}
-/* the Spotify player: one iframe for the whole visit, only shown when it needs a tap */
-.player{width:min(calc(100vw - 32px),400px);height:0;overflow:hidden;border-radius:12px}
-.gate.asking .player,.player.float{height:80px;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 34px -8px rgba(255,74,26,.75)}
-.player.float{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);visibility:visible;z-index:63}
-.player iframe{display:block;width:100%;height:80px;border:0}
+/* the Spotify player: one iframe for the whole visit. Compact while asking, full card when opened from the music button */
+.player{position:relative;width:min(calc(100vw - 32px),400px);height:0;overflow:visible}
+.player iframe{display:block;width:100%;height:100%;border:0;border-radius:12px}
+.gate.asking .player{height:80px}
+.gate.asking .player iframe,.player.open iframe{box-shadow:0 0 0 1px rgba(255,255,255,.14),0 0 34px -8px rgba(255,74,26,.75)}
+.player.float{position:fixed;left:auto;right:14px;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 56px);width:min(calc(100vw - 28px),380px);height:152px;z-index:63;
+  visibility:hidden;opacity:0;transform:scale(.15);transform-origin:calc(100% - 22px) calc(100% + 34px);transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .25s,visibility 0s .35s}
+.player.float.open{visibility:visible;opacity:1;transform:none;transition:transform .4s cubic-bezier(.2,.8,.2,1),opacity .25s}
+.player .x{display:none;position:absolute;right:0;top:-38px;width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(10,8,8,.85);color:var(--white);font:400 16px/1 var(--font-grotesk);cursor:pointer}
+.player.open .x{display:grid;place-items:center}
+.player .x:hover,.player .x:focus-visible{border-color:var(--orange-s1);outline:0}
+.music.open{border-color:var(--orange-s1)}
 /* on/off: one small round control */
 .music{position:fixed;z-index:64;bottom:max(14px,env(safe-area-inset-bottom));right:14px;display:none;place-items:center;width:44px;height:44px;padding:0;border-radius:50%;border:1px solid rgba(255,255,255,.22);
   background:rgba(10,8,8,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:var(--muted);cursor:pointer}
@@ -234,10 +241,10 @@ html.anim .music{display:none}
     <button class="btn yes" type="button" id="g-yes">Sí, con música ♪</button>
     <button class="no" type="button" id="g-no">Sin música</button>
   </div>
-  <div class="player" id="player"><div id="spot"></div></div>
+  <div class="player" id="player"><div id="spot"></div><button class="x" type="button" id="p-x" aria-label="Cerrar reproductor">×</button></div>
   <p class="tap" id="g-tap" hidden>Toca ▶ en el reproductor y entramos.<br><button type="button" id="g-skip">entrar sin música</button></p>
 </div>
-<button class="music" type="button" id="music" aria-pressed="false" aria-label="Música" title="Música on / off"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
+<button class="music" type="button" id="music" aria-pressed="false" aria-label="Música" title="Música" aria-expanded="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
 <div class="invite" id="invite" hidden><span>¿Te gustó <b style="font-weight:400;color:#fff">1989</b>? <a href="https://open.spotify.com/track/6Xxt1e8SGqKs4PradBjmMY" target="_blank" rel="noopener">escúchala completa en Spotify ↗</a></span><button type="button" aria-label="Cerrar" id="inv-x">×</button></div>
 <script>
 (function(){
@@ -249,7 +256,7 @@ html.anim .music{display:none}
     if(p&&waiting){ var w=waiting; waiting=null; w() } }
   // Spotify's iFrame API gives play/pause control; without it a plain embed still plays on its own tap
   window.onSpotifyIframeApiReady=function(api){
-    api.createController(document.getElementById('spot'),{uri:URI,width:'100%',height:80},function(c){ ctrl=c;
+    api.createController(document.getElementById('spot'),{uri:URI,width:'100%',height:'100%'},function(c){ ctrl=c;
       c.addListener('playback_update',function(e){ var d=e&&e.data||{}, on=!d.isPaused;
         if(on&&!started){ started=true; if(d.position>1500) c.seek(0) }   // always from the top
         if(started&&!on&&(d.position===0||d.duration&&d.position>=d.duration-1200)) invite.hidden=false;  // the song ended
@@ -260,8 +267,7 @@ html.anim .music{display:none}
   s.onerror=function(){ document.getElementById('spot').outerHTML='<iframe src="'+EMBED+'" allow="autoplay; encrypted-media" title="1989 de Silver MX en Spotify"></iframe>' };
   document.head.appendChild(s);
 
-  function hideFloat(){ player.classList.remove('float') }
-  function land(){ waiting=null; gate.classList.remove('on','asking'); gate.classList.add('done'); tap.hidden=true; skip&&skip.classList.remove('hide'); btn.classList.add('show'); var r=resume; resume=null; r&&r() }
+  function land(){ waiting=null; gate.classList.remove('on','asking'); gate.classList.add('done'); tap.hidden=true; player.classList.add('float'); skip&&skip.classList.remove('hide'); btn.classList.add('show'); var r=resume; resume=null; r&&r() }
   function ask(){ gate.classList.add('asking'); tap.hidden=false; waiting=land }  // the listener taps the player's own ▶, which phones always allow
   window.smxGate=function(next){ resume=next; skip&&skip.classList.add('hide'); gate.classList.add('on'); document.getElementById('g-yes').focus({preventScroll:true}) };
   window.smxGateDone=function(){ if(gate.classList.contains('on')) land(); else btn.classList.add('show') };
@@ -273,12 +279,12 @@ html.anim .music{display:none}
     setTimeout(function(){ if(!playing&&waiting) ask() },2500);
   });
   // on/off after landing
-  btn.addEventListener('click',function(){
-    if(playing&&ctrl){ ctrl.pause(); return }
-    if(playing){ player.classList.add('float'); return }   // plain embed: show it so they can pause there
-    if(ctrl){ ctrl.resume?ctrl.resume():ctrl.play(); setTimeout(function(){ if(!playing){ player.classList.add('float'); waiting=hideFloat } },2500); return }
-    player.classList.toggle('float'); waiting=hideFloat;
-  });
+  // music button: opens the full Spotify card (cover, song, Spotify, + to save); tap outside or × to fold it back
+  function openP(o){ player.classList.add('float'); player.classList.toggle('open',o); btn.classList.toggle('open',o); btn.setAttribute('aria-expanded',o); if(o) invite.hidden=true }
+  btn.addEventListener('click',function(){ openP(!player.classList.contains('open')) });
+  document.getElementById('p-x').addEventListener('click',function(){ openP(false) });
+  document.addEventListener('pointerdown',function(e){ if(player.classList.contains('open')&&!e.target.closest('#player,#music')) openP(false) });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&player.classList.contains('open')) openP(false) });
   if(!document.documentElement.classList.contains('anim')) btn.classList.add('show');
 })();
 </script>
