@@ -174,12 +174,6 @@ html.anim .skip.hide{opacity:0!important;pointer-events:none}
 .music.playing .eq i{background:var(--orange-s1);animation:meq 1s ease-in-out infinite}
 .music.playing .eq i:nth-child(2){animation-delay:-.35s}.music.playing .eq i:nth-child(3){animation-delay:-.7s}.music.playing .eq i:nth-child(4){animation-delay:-.2s}
 @keyframes meq{0%,100%{height:3px}50%{height:14px}}
-/* when the song stops: invite to the full track on Spotify */
-.invite{position:fixed;z-index:64;right:14px;bottom:calc(max(14px,env(safe-area-inset-bottom)) + 54px);display:flex;align-items:center;gap:10px;max-width:calc(100vw - 28px);padding:10px 10px 10px 14px;border-radius:12px;
-  border:1px solid rgba(255,74,26,.5);background:rgba(10,8,8,.88);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font:400 11.5px/1.35 var(--font-mono);color:#d9d2cf;box-shadow:0 0 26px -8px rgba(255,74,26,.7);animation:fi .4s ease-out}
-.invite[hidden]{display:none}
-.invite a{color:var(--orange-s1);text-decoration:none;white-space:nowrap}
-.invite button{background:none;border:0;color:var(--muted);font:inherit;font-size:14px;padding:2px 4px;cursor:pointer}
 @keyframes fi{from{opacity:0;transform:translateY(6px)}}
 html.anim .music{display:none}
 </style>
@@ -246,13 +240,11 @@ html.anim .music{display:none}
   <p class="tap" id="g-tap" hidden>Toca ▶ en el reproductor y entramos.<br><button type="button" id="g-skip">entrar sin música</button></p>
 </div>
 <button class="music" type="button" id="music" aria-pressed="false" aria-label="Música" title="Música" aria-expanded="false"><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
-<div class="invite" id="invite" hidden><span>¿Te gustó <b style="font-weight:400;color:#fff">1989</b>? <a href="https://open.spotify.com/track/6Xxt1e8SGqKs4PradBjmMY" target="_blank" rel="noopener">escúchala completa en Spotify ↗</a></span><button type="button" aria-label="Cerrar" id="inv-x">×</button></div>
 <script>
 (function(){
   var URI='spotify:track:6Xxt1e8SGqKs4PradBjmMY', EMBED='https://open.spotify.com/embed/track/6Xxt1e8SGqKs4PradBjmMY?utm_source=generator&theme=0';
   var gate=document.getElementById('gate'), tap=document.getElementById('g-tap'), player=document.getElementById('player'), btn=document.getElementById('music'), skip=document.querySelector('.skip');
-  var ctrl=null, playing=false, started=false, waiting=null, resume=null, invite=document.getElementById('invite');
-  document.getElementById('inv-x').addEventListener('click',function(){invite.hidden=true});
+  var ctrl=null, playing=false, started=false, waiting=null, resume=null;
   function setPlaying(p){ playing=p; btn.classList.toggle('playing',p); btn.setAttribute('aria-pressed',p); 
     if(p&&waiting){ var w=waiting; waiting=null; w() } }
   // Spotify's iFrame API gives play/pause control; without it a plain embed still plays on its own tap
@@ -260,8 +252,6 @@ html.anim .music{display:none}
     api.createController(document.getElementById('spot'),{uri:URI,width:'100%',height:'100%'},function(c){ ctrl=c;
       c.addListener('playback_update',function(e){ var d=e&&e.data||{}, on=!d.isPaused;
         if(on&&!started){ started=true; if(d.position>1500) c.seek(0) }   // always from the top
-        if(started&&!on&&(d.position===0||d.duration&&d.position>=d.duration-1200)) invite.hidden=false;  // the song ended
-        if(on) invite.hidden=true;
         setPlaying(on) }) });
   };
   var s=document.createElement('script'); s.src='https://open.spotify.com/embed/iframe-api/v1'; s.async=true;
@@ -283,7 +273,7 @@ html.anim .music{display:none}
   });
   // on/off after landing
   // music button: opens the full Spotify card (cover, song, Spotify, + to save); tap outside or × to fold it back
-  function openP(o){ dock(); player.classList.toggle('open',o); btn.classList.toggle('open',o); btn.setAttribute('aria-expanded',o); if(o) invite.hidden=true }
+  function openP(o){ dock(); player.classList.toggle('open',o); btn.classList.toggle('open',o); btn.setAttribute('aria-expanded',o); }
   btn.addEventListener('click',function(){ openP(!player.classList.contains('open')) });
   document.getElementById('p-x').addEventListener('click',function(){ openP(false) });
   document.addEventListener('pointerdown',function(e){ if(player.classList.contains('open')&&!e.target.closest('#player,#music')) openP(false) });
